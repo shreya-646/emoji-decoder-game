@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Decoder Challenge</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+        :root {
+            --primary-color: #FFC107;
+            --secondary-color: #FF9800;
+            --background-color: #FFFDE7;
+            --text-color: #424242;
+            --card-background: #FFFFFF;
+            --correct-color: #4CAF50;
+            --wrong-color: #F44336;
+            --hint-color: #2196F3;
+            --streak-color: #FF5722;
+            --dark-card-bg: #455A64;
+            --blue-card-bg: #2196F3;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+            padding-top: 60px; /* Space for fixed header */
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 20px auto;
+            padding: 15px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media (min-width: 992px) {
+            .container {
+                grid-template-columns: 1fr 320px; /* Main content and a sidebar */
+                grid-template-rows: auto auto; /* Define rows for main/sidebar and daily/emoji */
+                gap: 30px;
+            }
+        }
+
+        h1, h2, h3 {
+            color: var(--secondary-color);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background-color: var(--card-background);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* Header */
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+         header h1 {
+            color: white;
+            margin: 0;
+            font-size: 1.8em;
+         }
+
+        /* Main Game Area */
+        #game-section {
+            grid-column: 1 / -1; /* Full width on small screens */
+        }
+
+         @media (min-width: 992px) {
+            #game-section {
+                grid-column: 1 / 2; /* First column */
+                grid-row: 1 / 2; /* First row */
+            }
+        }
+
+        #level-display {
+            font-size: 1.6em;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        #puzzle-display {
+            font-size: 4em; /* Larger emojis */
+            text-align: center;
+            margin-bottom: 25px;
+            animation: bounce 0.8s infinite alternate;
+            min-height: 80px;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to   { transform: translateY(-12px); }
+        }
+
+        #guess-input {
+            width: calc(100% - 34px); /* Adjusted padding */
+            padding: 15px;
+            border: 2px solid var(--secondary-color);
+            border-radius: 10px;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px; /* Increased gap */
+            margin-bottom: 20px;
+            flex-wrap: wrap; /* Allow buttons to wrap */
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.15em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .btn:hover { transform: scale(1.05); }
+
+        #guess-btn { background-color: var(--correct-color); color: white; }
+        #guess-btn:hover { background-color: #388E3C; }
+
+        #hint-btn { background-color: var(--hint-color); color: white; }
+        #hint-btn:hover { background-color: #1976D2; }
+
+        #next-puzzle-btn {
+            background-color: var(--secondary-color);
+            color: white;
+            display: none; /* Hidden by default */
+        }
+         #next-puzzle-btn:hover { background-color: #F57C00; }
+
+
+        #message-area {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 600;
+            min-height: 55px;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        #guesses-left {
+            text-align: center;
+            font-size: 1.1em;
+            color: #757575;
+            margin-bottom: 20px;
+        }
+
+        #level-completion {
+            display: none; /* Hidden by default */
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            animation: flipIn 0.8s ease;
+        }
+         #level-completion h2 { color: white; font-size: 2em; }
+         #level-completion p { font-size: 1.2em; }
+
+        @keyframes flipIn {
+            from { transform: perspective(400px) rotateY(90deg); opacity: 0; }
+            to   { transform: perspective(400px) rotateY(0deg); opacity: 1; }
+        }
+
+        #level-up-btn {
+            background-color: white;
+            color: var(--secondary-color);
+            padding: 15px 35px;
+            font-size: 1.4em;
+            margin-top: 25px;
+        }
+         #level-up-btn:hover { background-color: #f1f1f1; transform: scale(1.05); }
+
+
+        /* Sidebar (Stats, Streak) */
+         .sidebar {
+            grid-column: 1 / -1; /* Full width on small screens */
+         }
+
+        @media (min-width: 992px) {
+            .sidebar {
+                grid-column: 2 / 3; /* Second column */
+                grid-row: 1 / 3; /* Span both rows to stay sticky */
+                position: sticky;
+                top: 80px; /* Below header */
+                align-self: start; /* Align to the top of its grid area */
+            }
+        }
+
+        /* Streak System */
+        #streak-section .card {
+            background-color: var(--streak-color);
+            color: white;
+            text-align: center;
+        }
+         #streak-section h2 { color: white; }
+
+        #streak-counter {
+            font-size: 4.5em; /* Bigger flame */
+            font-weight: 700;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: flameFlicker 1.5s infinite alternate;
+        }
+
+        #streak-counter span { margin-left: 10px; }
+
+        @keyframes flameFlicker {
+            0%   { transform: scale(1); opacity: 1; }
+            50%  { transform: scale(1.05) skewX(5deg); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #streak-meter {
+            width: 100%;
+            height: 12px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        #streak-bar {
+            width: 0%; /* Updated via JS */
+            height: 100%;
+            background-color: white;
+            border-radius: 6px;
+            transition: width 0.5s ease;
+        }
+
+        /* Stats & Progress */
+        #stats-section ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        #stats-section li {
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 6px;
+        }
+        #stats-section li strong { color: var(--secondary-color); }
+
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 6px;
+            margin-top: 15px;
+            height: 22px; /* Increased height */
+            overflow: hidden; /* Ensure inner bar fits */
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%; /* Updated via JS */
+            background-color: var(--correct-color);
+            border-radius: 6px;
+            text-align: center;
+            line-height: 22px; /* Match height */
+            color: white;
+            font-size: 0.9em;
+            transition: width 0.5s ease;
+        }
+
+        /* Bottom Sections Container */
+        .bottom-sections {
+            grid-column: 1 / -1; /* Full width on small screens */
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media (min-width: 992px) {
+            .bottom-sections {
+                grid-column: 1 / 2; /* First column */
+                grid-row: 2 / 3; /* Second row */
+                grid-template-columns: 1fr 1fr; /* Side-by-side */
+                gap: 30px;
+            }
+        }
+
+
+        /* Daily Challenge */
+        #daily-challenge-section {
+            background-color: var(--dark-card-bg);
+            color: white;
+        }
+        #daily-challenge-section h2 { color: var(--primary-color); }
+
+        #daily-puzzle {
+            font-size: 3.5em; /* Increased size */
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        #daily-status {
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        #daily-timer, #daily-answer {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--primary-color);
+            min-height: 30px;
+            text-align: center;
+        }
+         #daily-challenge-section input {
+            width: calc(100% - 30px);
+            padding: 12px;
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            font-size: 1em;
+            margin-bottom: 15px;
+            text-align: center;
+            background-color: #546E7A;
+            color: white;
+         }
+        #daily-challenge-section input::placeholder { color: #CFD8DC; }
+         #daily-message-area {
+            text-align: center;
+            min-height: 25px;
+            font-weight: 600;
+            margin-top: 10px;
+         }
+
+
+        /* Emoji of the Day */
+        #emoji-of-day-section {
+            background-color: var(--blue-card-bg);
+            color: white;
+        }
+         #emoji-of-day-section h2 { color: white; }
+
+        #daily-emoji {
+            font-size: 4.5em; /* Increased size */
+            text-align: center;
+        }
+        #emoji-name {
+            font-size: 1.4em;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 10px;
+        }
+        #emoji-story {
+            font-size: 1em;
+            margin-top: 15px;
+            text-align: left; /* Better readability */
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 991px) {
+            .bottom-sections {
+                grid-template-columns: 1fr; /* Stack on medium/small */
+            }
+        }
+
+        @media (max-width: 767px) {
+            body { padding-top: 50px; }
+            header h1 { font-size: 1.5em; }
+            #puzzle-display { font-size: 3em; }
+            #daily-puzzle { font-size: 3em; }
+            .btn { padding: 10px 20px; font-size: 1em; }
+            .card { padding: 20px; }
+        }
+
+         /* Shake animation for wrong guess */
+        @keyframes shake {
+          0% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          50% { transform: translateX(5px); }
+          75% { transform: translateX(-5px); }
+          100% { transform: translateX(0); }
+        }
+
+        .shake {
+            animation: shake 0.4s;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>🌟 Emoji Decoder Challenge 🌟</h1>
+    </header>
+
+    <div class="container">
+
+        <main id="game-section" class="card">
+            <div id="level-display">Level 1</div>
+            <div id="puzzle-display">⏳</div>
+            <div id="guesses-left">Guesses left: 3</div>
+            <input type="text" id="guess-input" placeholder="Type your guess here...">
+            <div id="message-area">Let's Play!</div>
+            <div class="button-group">
+                <button id="guess-btn" class="btn">Guess!</button>
+                <button id="hint-btn" class="btn">Hint 💡</button>
+                <button id="next-puzzle-btn" class="btn">Next Puzzle ➡️</button>
+            </div>
+
+
+            <div id="level-completion" class="card">
+                <h2>Level Complete! 🎉</h2>
+                <p>Score: <span id="level-score">0</span></p>
+                <p>Time: <span id="level-time">0s</span></p>
+                <p>Accuracy: <span id="level-accuracy">0%</span></p>
+                <button id="level-up-btn" class="btn">Level Up! 🚀</button>
+            </div>
+        </main>
+
+        <aside class="sidebar">
+            <section id="streak-section" class="card">
+                <h2>Your Streak</h2>
+                <div id="streak-counter">🔥<span>0</span></div>
+                <p>Keep playing daily to build your streak!</p>
+                <div id="streak-meter"><div id="streak-bar"></div></div>
+            </section>
+
+            <section id="stats-section" class="card">
+                <h2>Your Progress 📊</h2>
+                <ul>
+                    <li>Longest Streak: <strong id="longest-streak">0</strong></li>
+                    <li>Puzzles Solved: <strong id="total-solved">0</strong></li>
+                    <li>Current Level: <strong id="current-level-stat">1</strong></li>
+                    <li>Daily Challenges Done: <strong id="daily-completed">0</strong></li>
+                </ul>
+                <h4>Level Progress:</h4>
+                <div class="progress-bar-container">
+                   <div class="progress-bar" id="level-progress-bar">0/7</div>
+                </div>
+                 <h4>Today's Activity:</h4>
+                <div class="progress-bar-container">
+                   <div class="progress-bar" id="today-activity-bar" style="background-color: var(--hint-color);">Not Played</div>
+                </div>
+            </section>
+        </aside>
+
+        <div class="bottom-sections">
+             <section id="daily-challenge-section" class="card">
+                <h2 id="daily-challenge-title">Daily Challenge (May 26)</h2>
+                <div id="daily-puzzle">🤔</div>
+                <div id="daily-status">Status: Puzzling...</div>
+                <div id="daily-timer">Answer reveals in: --:--:--</div>
+                <div id="daily-answer"></div>
+                 <input type="text" id="daily-guess-input" placeholder="Daily guess...">
+                 <div id="daily-message-area"></div>
+                 <div class="button-group" style="margin-top: 10px;">
+                    <button id="daily-guess-btn" class="btn" style="background-color: #009688;">Guess</button>
+                    <button id="daily-hint-btn" class="btn" style="background-color: #607D8B;">Hint</button>
+                    <button id="daily-give-up-btn" class="btn" style="background-color: #9E9E9E;">Give Up?</button>
+                 </div>
+            </section>
+
+            <section id="emoji-of-day-section" class="card">
+                <h2>Emoji of the Day</h2>
+                <div id="daily-emoji">😊</div>
+                <div id="emoji-name">Smiling Face with Smiling Eyes</div>
+                <div id="emoji-story">
+                    This happy emoji often expresses genuine happiness and warm, positive feelings. Unlike the basic smiley, its eyes crinkle, showing a more heartfelt smile. It first appeared way back in 2010!
+                </div>
+            </section>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const levelDisplay = document.getElementById('level-display');
+        const puzzleDisplay = document.getElementById('puzzle-display');
+        const guessesLeftDisplay = document.getElementById('guesses-left');
+        const guessInput = document.getElementById('guess-input');
+        const guessBtn = document.getElementById('guess-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const nextPuzzleBtn = document.getElementById('next-puzzle-btn'); // New button
+        const messageArea = document.getElementById('message-area');
+        const levelCompletionCard = document.getElementById('level-completion');
+        const levelScoreDisplay = document.getElementById('level-score');
+        const levelTimeDisplay = document.getElementById('level-time');
+        const levelAccuracyDisplay = document.getElementById('level-accuracy');
+        const levelUpBtn = document.getElementById('level-up-btn');
+        const streakCounter = document.getElementById('streak-counter').querySelector('span');
+        const streakBar = document.getElementById('streak-bar');
+        const longestStreakDisplay = document.getElementById('longest-streak');
+        const totalSolvedDisplay = document.getElementById('total-solved');
+        const currentLevelStatDisplay = document.getElementById('current-level-stat');
+        const dailyCompletedDisplay = document.getElementById('daily-completed');
+        const levelProgressBar = document.getElementById('level-progress-bar');
+        const todayActivityBar = document.getElementById('today-activity-bar');
+        const dailyChallengeTitle = document.getElementById('daily-challenge-title');
+        const dailyPuzzleDisplay = document.getElementById('daily-puzzle');
+        const dailyStatusDisplay = document.getElementById('daily-status');
+        const dailyTimerDisplay = document.getElementById('daily-timer');
+        const dailyAnswerDisplay = document.getElementById('daily-answer');
+        const dailyGuessInput = document.getElementById('daily-guess-input');
+        const dailyGuessBtn = document.getElementById('daily-guess-btn');
+        const dailyHintBtn = document.getElementById('daily-hint-btn');
+        const dailyGiveUpBtn = document.getElementById('daily-give-up-btn');
+        const dailyMessageArea = document.getElementById('daily-message-area');
+        const dailyEmojiDisplay = document.getElementById('daily-emoji');
+        const emojiNameDisplay = document.getElementById('emoji-name');
+        const emojiStoryDisplay = document.getElementById('emoji-story');
+        const gameSectionCard = document.getElementById('game-section'); // For shake animation
+
+        // --- Emoji Puzzles (Simplified - Ideally fetched or generated) ---
+        const emojiPuzzles = {
+            1: [
+                { puzzle: "🍎", answer: "apple", hint: "A common red fruit" },
+                { puzzle: "🍌", answer: "banana", hint: "A long yellow fruit" },
+                { puzzle: "🏠", answer: "house", hint: "Where people live" },
+                { puzzle: "🚗", answer: "car", hint: "A wheeled vehicle" },
+                { puzzle: "🐶", answer: "dog", hint: "Man's best friend" },
+                { puzzle: "☀️", answer: "sun", hint: "Our star" },
+                { puzzle: "🌙", answer: "moon", hint: "Shines at night" },
+            ],
+            2: [
+                { puzzle: "🍕", answer: "pizza", hint: "Cheesy Italian dish" },
+                { puzzle: "✈️", answer: "airplane", hint: "Flies in the sky" },
+                { puzzle: "📚", answer: "books", hint: "You read these" },
+                { puzzle: "⏰", answer: "clock", hint: "Tells the time" },
+                { puzzle: "🌲", answer: "tree", hint: "Grows in the forest" },
+                { puzzle: "💧", answer: "water", hint: "H2O" },
+                { puzzle: "🔥", answer: "fire", hint: "Hot and bright" },
+            ],
+             3: [
+                { puzzle: "🧑‍💻", answer: "developer", hint: "Writes code" },
+                { puzzle: "🗽", answer: "statue of liberty", hint: "A gift from France in NYC" },
+                { puzzle: "🍔🍟", answer: "fast food", hint: "Quick meal" },
+                { puzzle: "🌧️☂️", answer: "rainy day", hint: "Needs an umbrella" },
+                { puzzle: "🎂🎉", answer: "birthday party", hint: "Yearly celebration" },
+                { puzzle: "😴🛌", answer: "sleeping", hint: "Resting at night" },
+                { puzzle: "⚽🥅", answer: "soccer goal", hint: "Scoring in football" },
+             ]
+            // ... Add more levels up to 50
+        };
+
+        const dailyPuzzles = [ // Sample daily puzzles
+            { date: "2025-05-26", puzzle: "🌍🤝🕊️", answer: "world peace", hint: "Global harmony" },
+            { date: "2025-05-27", puzzle: "🚀🌌⭐", answer: "space travel", hint: "Journey beyond Earth" },
+        ];
+
+         const emojiOfTheDayData = [
+            { date: "2025-05-26", emoji: "😂", name: "Face with Tears of Joy", story: "One of the most used emojis globally, it signifies something is extremely funny. It was Oxford Dictionaries' Word of the Year in 2015!" },
+            { date: "2025-05-27", emoji: "❤️", name: "Red Heart", story: "A classic symbol of love and affection, used across cultures and contexts. Its digital form dates back to early internet days." },
+         ];
+
+        // --- Game State ---
+        let gameState = {
+            currentLevel: 1,
+            puzzlesInLevel: 7,
+            currentPuzzleIndex: 0,
+            guessesLeft: 3,
+            currentScore: 0,
+            levelStartTime: 0,
+            totalSolved: 0,
+            longestStreak: 0,
+            currentStreak: 0,
+            lastPlayedDate: null,
+            dailyChallengesCompleted: 0,
+            dailyChallenge: {
+                solved: false,
+                missed: false,
+                puzzle: null,
+                revealed: false
+            },
+            maxLevel: 3 // Set to 3 for demo, change to 50
+        };
+
+        const positiveMessages = ["Great!", "Awesome!", "Well done!", "You nailed it!", "Superb!", "Fantastic!"];
+
+        // --- Local Storage ---
+        function saveGame() {
+            localStorage.setItem('emojiDecoderGameState', JSON.stringify(gameState));
+        }
+
+        function loadGame() {
+            const savedState = localStorage.getItem('emojiDecoderGameState');
+            if (savedState) {
+                gameState = JSON.parse(savedState);
+            }
+             checkStreak(); // Check streak on load
+        }
+
+        // --- Game Logic ---
+        function getPuzzleSet(level) {
+            return emojiPuzzles[level] || emojiPuzzles[Object.keys(emojiPuzzles).length];
+        }
+
+        function startGame() {
+            loadGame();
+            startLevel(gameState.currentLevel);
+            setupDailyChallenge();
+            updateStatsDisplay();
+            updateEmojiOfTheDay();
+        }
+
+        function startLevel(level) {
+            gameState.currentLevel = level;
+            gameState.currentPuzzleIndex = 0;
+            gameState.currentScore = 0;
+            gameState.levelStartTime = Date.now();
+            levelCompletionCard.style.display = 'none';
+            loadPuzzle(gameState.currentPuzzleIndex);
+            updateStatsDisplay();
+            levelDisplay.textContent = `Level ${gameState.currentLevel}`;
+        }
+
+        function loadPuzzle(index) {
+            if (index >= gameState.puzzlesInLevel) {
+                endLevel();
+                return;
+            }
+            const puzzles = getPuzzleSet(gameState.currentLevel);
+            const puzzle = puzzles[index];
+            puzzleDisplay.textContent = puzzle.puzzle;
+            gameState.guessesLeft = 3;
+            guessInput.value = '';
+            messageArea.textContent = 'Guess the meaning!';
+            messageArea.style.color = 'var(--text-color)';
+            updateGuessesDisplay();
+            updateProgressBar();
+            guessInput.focus();
+
+            // Set button states
+            guessInput.disabled = false;
+            guessBtn.style.display = 'inline-block';
+            hintBtn.style.display = 'inline-block';
+            nextPuzzleBtn.style.display = 'none';
+        }
+
+        function handleGuess() {
+            const guess = guessInput.value.trim().toLowerCase();
+            if (!guess || guessBtn.style.display === 'none') return; // Don't guess if button hidden
+
+            const puzzles = getPuzzleSet(gameState.currentLevel);
+            const correctAnswer = puzzles[gameState.currentPuzzleIndex].answer.toLowerCase();
+
+            if (guess === correctAnswer) {
+                messageArea.textContent = positiveMessages[Math.floor(Math.random() * positiveMessages.length)];
+                messageArea.style.color = 'var(--correct-color)';
+                gameState.currentScore += gameState.guessesLeft * 10;
+                gameState.totalSolved++;
+                updateStreak();
+                showNextButton();
+            } else {
+                gameState.guessesLeft--;
+                updateGuessesDisplay();
+                if (gameState.guessesLeft === 0) {
+                    messageArea.textContent = `Oops! The answer was: ${correctAnswer}.`;
+                    messageArea.style.color = 'var(--wrong-color)';
+                    updateStreak(); // Count attempt as play
+                    showNextButton();
+                } else {
+                    messageArea.textContent = "Not quite! Try again.";
+                    messageArea.style.color = 'var(--wrong-color)';
+                    guessInput.value = '';
+                    animateWrongGuess();
+                }
+            }
+            updateStatsDisplay(); // Update stats after each guess/solve
+            saveGame();
+        }
+
+        function showNextButton() {
+            guessInput.disabled = true;
+            guessBtn.style.display = 'none';
+            hintBtn.style.display = 'none';
+            nextPuzzleBtn.style.display = 'inline-block';
+            nextPuzzleBtn.focus();
+        }
+
+        function handleNextPuzzle() {
+            gameState.currentPuzzleIndex++;
+            loadPuzzle(gameState.currentPuzzleIndex);
+        }
+
+        function handleHint() {
+            const puzzles = getPuzzleSet(gameState.currentLevel);
+            const puzzle = puzzles[gameState.currentPuzzleIndex];
+            messageArea.textContent = `Hint: ${puzzle.hint || 'No hint available!'}`;
+            messageArea.style.color = 'var(--hint-color)';
+        }
+
+        function endLevel() {
+            guessInput.disabled = true;
+            guessBtn.style.display = 'none';
+            hintBtn.style.display = 'none';
+            nextPuzzleBtn.style.display = 'none';
+            puzzleDisplay.textContent = '🏆';
+
+
+            const endTime = Date.now();
+            const timeTaken = Math.round((endTime - gameState.levelStartTime) / 1000);
+            const accuracy = Math.round((gameState.currentScore / (gameState.puzzlesInLevel * 30)) * 100);
+
+            levelScoreDisplay.textContent = gameState.currentScore;
+            levelTimeDisplay.textContent = `${timeTaken}s`;
+            levelAccuracyDisplay.textContent = `${accuracy}%`;
+
+            levelCompletionCard.style.display = 'block';
+
+            if (gameState.currentLevel >= gameState.maxLevel) {
+                levelUpBtn.textContent = "Play Again?";
+                levelUpBtn.onclick = () => { gameState.currentLevel = 0; handleLevelUp(); };
+            } else {
+                 levelUpBtn.textContent = "Level Up! 🚀";
+                 levelUpBtn.onclick = handleLevelUp;
+            }
+        }
+
+        function handleLevelUp() {
+             if (gameState.currentLevel < gameState.maxLevel) {
+                 gameState.currentLevel++;
+             } else {
+                 gameState.currentLevel = 1; // Restart
+             }
+            startLevel(gameState.currentLevel);
+            saveGame();
+        }
+
+        function updateGuessesDisplay() {
+            guessesLeftDisplay.textContent = `Guesses left: ${gameState.guessesLeft}`;
+        }
+
+         function animateWrongGuess() {
+            gameSectionCard.classList.add('shake');
+            setTimeout(() => gameSectionCard.classList.remove('shake'), 400);
+         }
+
+        // --- Daily Challenge Logic ---
+         let dailyCountdownInterval;
+
+         function setupDailyChallenge() {
+            const today = new Date().toISOString().slice(0, 10);
+            const challenge = dailyPuzzles.find(p => p.date === today) || dailyPuzzles[0]; // Fallback
+
+            dailyChallengeTitle.textContent = `Daily Challenge (${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+
+            if (!challenge) {
+                dailyPuzzleDisplay.textContent = "🧘";
+                dailyStatusDisplay.textContent = "No challenge today.";
+                dailyTimerDisplay.textContent = "";
+                dailyGuessInput.style.display = 'none';
+                document.querySelector('#daily-challenge-section .button-group').style.display = 'none';
+                return;
+            }
+
+            gameState.dailyChallenge.puzzle = challenge;
+            dailyPuzzleDisplay.textContent = challenge.puzzle;
+
+            const savedDaily = localStorage.getItem(`daily_${today}`);
+             if (savedDaily) {
+                const dailyData = JSON.parse(savedDaily);
+                gameState.dailyChallenge.solved = dailyData.solved;
+                gameState.dailyChallenge.missed = dailyData.missed;
+                gameState.dailyChallenge.revealed = dailyData.revealed;
+             } else {
+                 gameState.dailyChallenge.solved = false;
+                 gameState.dailyChallenge.missed = false;
+                 gameState.dailyChallenge.revealed = false;
+             }
+
+            updateDailyStatus();
+            startDailyTimer();
+         }
+
+        function startDailyTimer() {
+            clearInterval(dailyCountdownInterval);
+
+            const revealTimeEST = new Date();
+             // IMPORTANT: Set to 9 PM EST. For simplicity, we use local 9 PM (21:00).
+             // A robust solution would need timezone handling or server time.
+            revealTimeEST.setHours(21, 0, 0, 0);
+
+            dailyCountdownInterval = setInterval(() => {
+                const now = new Date();
+                const diff = revealTimeEST - now;
+
+                if (gameState.dailyChallenge.revealed || gameState.dailyChallenge.solved || diff <= 0) {
+                    revealDailyAnswer();
+                    clearInterval(dailyCountdownInterval);
+                    return;
+                }
+
+                const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                const minutes = Math.floor((diff / 1000 / 60) % 60);
+                const seconds = Math.floor((diff / 1000) % 60);
+
+                dailyTimerDisplay.textContent = `Answer reveals in: ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                dailyTimerDisplay.style.display = 'block';
+                dailyAnswerDisplay.textContent = '';
+            }, 1000);
+        }
+
+        function handleDailyGuess() {
+            const guess = dailyGuessInput.value.trim().toLowerCase();
+            if (!guess || !gameState.dailyChallenge.puzzle || gameState.dailyChallenge.solved || gameState.dailyChallenge.revealed) return;
+
+            if (guess === gameState.dailyChallenge.puzzle.answer.toLowerCase()) {
+                dailyMessageArea.textContent = "You got the Daily Challenge!";
+                dailyMessageArea.style.color = 'var(--primary-color)';
+                gameState.dailyChallenge.solved = true;
+                gameState.dailyChallengesCompleted++;
+                updateDailyStatus();
+                updateStreak();
+                saveDailyState();
+                saveGame();
+            } else {
+                dailyMessageArea.textContent = "Keep trying!";
+                dailyMessageArea.style.color = '#FFB74D';
+            }
+             dailyGuessInput.value = '';
+        }
+
+         function handleDailyHint() {
+             if (!gameState.dailyChallenge.puzzle || gameState.dailyChallenge.solved || gameState.dailyChallenge.revealed) return;
+             dailyMessageArea.textContent = `Hint: ${gameState.dailyChallenge.puzzle.hint}`;
+             dailyMessageArea.style.color = '#90CAF9';
+         }
+
+         function handleDailyGiveUp() {
+              if (!gameState.dailyChallenge.puzzle || gameState.dailyChallenge.solved || gameState.dailyChallenge.revealed) return;
+              gameState.dailyChallenge.missed = true;
+              revealDailyAnswer();
+         }
+
+
+        function revealDailyAnswer() {
+             if (!gameState.dailyChallenge.puzzle) return;
+            gameState.dailyChallenge.revealed = true;
+            dailyTimerDisplay.style.display = 'none';
+            dailyAnswerDisplay.textContent = `Answer: ${gameState.dailyChallenge.puzzle.answer}`;
+            dailyGuessInput.disabled = true;
+            dailyGuessBtn.disabled = true;
+            dailyHintBtn.disabled = true;
+            dailyGiveUpBtn.disabled = true;
+            updateDailyStatus();
+            saveDailyState();
+        }
+
+         function updateDailyStatus() {
+              if (!gameState.dailyChallenge.puzzle) return;
+              let statusText = "Status: ";
+              let buttonsDisabled = false;
+              if (gameState.dailyChallenge.solved) {
+                  statusText += "✅ Solved";
+                  buttonsDisabled = true;
+              } else if (gameState.dailyChallenge.missed || gameState.dailyChallenge.revealed) {
+                  statusText += "❌ Missed / Revealed";
+                  buttonsDisabled = true;
+              } else {
+                  statusText += "🤔 Puzzling...";
+              }
+             dailyStatusDisplay.textContent = statusText;
+             dailyGuessInput.disabled = buttonsDisabled;
+             dailyGuessBtn.disabled = buttonsDisabled;
+             dailyHintBtn.disabled = buttonsDisabled;
+             dailyGiveUpBtn.disabled = buttonsDisabled;
+         }
+
+         function saveDailyState() {
+             const today = new Date().toISOString().slice(0, 10);
+             const dataToSave = {
+                 solved: gameState.dailyChallenge.solved,
+                 missed: gameState.dailyChallenge.missed,
+                 revealed: gameState.dailyChallenge.revealed
+             };
+             localStorage.setItem(`daily_${today}`, JSON.stringify(dataToSave));
+         }
+
+        // --- Streak Logic ---
+        function checkStreak() {
+            const today = new Date().setHours(0, 0, 0, 0);
+            const lastPlayed = gameState.lastPlayedDate ? new Date(gameState.lastPlayedDate).setHours(0, 0, 0, 0) : null;
+
+            if (lastPlayed) {
+                const diffTime = today - lastPlayed;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays > 1) {
+                    gameState.currentStreak = 0;
+                }
+            } else {
+                 gameState.currentStreak = 0;
+            }
+             updateStreakDisplay();
+             saveGame();
+        }
+
+        function updateStreak() {
+            const today = new Date();
+            const todayMidnight = new Date(today).setHours(0, 0, 0, 0);
+            const lastPlayedMidnight = gameState.lastPlayedDate ? new Date(gameState.lastPlayedDate).setHours(0, 0, 0, 0) : null;
+
+            if (lastPlayedMidnight !== todayMidnight) {
+                const yesterdayMidnight = new Date(todayMidnight).setDate(new Date(todayMidnight).getDate() - 1);
+
+                if (lastPlayedMidnight === yesterdayMidnight) {
+                    gameState.currentStreak++;
+                } else {
+                    gameState.currentStreak = 1;
+                }
+
+                gameState.lastPlayedDate = today.toISOString();
+                if (gameState.currentStreak > gameState.longestStreak) {
+                    gameState.longestStreak = gameState.currentStreak;
+                }
+                 updateStreakDisplay();
+                 saveGame();
+            }
+             todayActivityBar.style.width = '100%';
+             todayActivityBar.textContent = 'Played Today!';
+        }
+
+        function updateStreakDisplay() {
+            streakCounter.textContent = gameState.currentStreak;
+             const barWidth = Math.min((gameState.currentStreak / 7) * 100, 100);
+             streakBar.style.width = `${barWidth}%`;
+        }
+
+        // --- Stats & Progress ---
+        function updateStatsDisplay() {
+            longestStreakDisplay.textContent = gameState.longestStreak;
+            totalSolvedDisplay.textContent = gameState.totalSolved;
+            currentLevelStatDisplay.textContent = gameState.currentLevel;
+            dailyCompletedDisplay.textContent = gameState.dailyChallengesCompleted;
+            updateProgressBar();
+
+            const today = new Date().setHours(0, 0, 0, 0);
+            const lastPlayed = gameState.lastPlayedDate ? new Date(gameState.lastPlayedDate).setHours(0, 0, 0, 0) : null;
+            if (lastPlayed === today) {
+                todayActivityBar.style.width = '100%';
+                todayActivityBar.textContent = 'Played Today!';
+            } else {
+                todayActivityBar.style.width = '0%';
+                todayActivityBar.textContent = 'Not Played';
+            }
+        }
+
+        function updateProgressBar() {
+            const progress = Math.round((gameState.currentPuzzleIndex / gameState.puzzlesInLevel) * 100);
+            levelProgressBar.style.width = `${progress}%`;
+            levelProgressBar.textContent = `${gameState.currentPuzzleIndex}/${gameState.puzzlesInLevel}`;
+        }
+
+        // --- Emoji of the Day ---
+         function updateEmojiOfTheDay() {
+            const today = new Date().toISOString().slice(0, 10);
+            const emojiData = emojiOfTheDayData.find(e => e.date === today) || emojiOfTheDayData[0]; // Fallback
+
+            dailyEmojiDisplay.textContent = emojiData.emoji;
+            emojiNameDisplay.textContent = emojiData.name;
+            emojiStoryDisplay.textContent = emojiData.story;
+         }
+
+        // --- Event Listeners ---
+        guessBtn.addEventListener('click', handleGuess);
+        guessInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleGuess();
+        });
+        hintBtn.addEventListener('click', handleHint);
+        nextPuzzleBtn.addEventListener('click', handleNextPuzzle); // New listener
+        levelUpBtn.addEventListener('click', handleLevelUp);
+
+        dailyGuessBtn.addEventListener('click', handleDailyGuess);
+         dailyGuessInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleDailyGuess();
+        });
+        dailyHintBtn.addEventListener('click', handleDailyHint);
+        dailyGiveUpBtn.addEventListener('click', handleDailyGiveUp);
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', startGame);
+
+    </script>
+</body>
+
+</html>
